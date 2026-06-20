@@ -6,4 +6,3 @@ server-error.log
 public-tunnel.log
 public-tunnel-error.log
 tools/cloudflared.exe
-config.js

@@ -34,6 +34,10 @@ py -3 server.py
 
 参加者の得点と発見ログは、現時点では各参加者のブラウザ内に保存されます。
 
+## GitHub Pages + Supabase
+
+正式な共有データはSupabaseの `orienteering_courses` と `orienteering_checkpoints` に保存します。管理者ログインにはSupabase Authのメールアドレス・パスワード認証を使います。GitHub Pagesはmainブランチへのpush時にActionsから更新されます。
+
 ## スマートフォンへ一時公開する
 
 Cloudflare Quick Tunnelを使う方法です。PCとスマートフォンが別のネットワークでもアクセスできます。アカウント登録は不要ですが、PCを起動したままにする必要があり、公開URLは起動ごとに変わります。

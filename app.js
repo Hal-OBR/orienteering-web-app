@@ -19,15 +19,90 @@ let userMarker = null;
 let accuracyCircle = null;
 let currentLocation = null;
 let adminAuthenticated = false;
+const supabaseConfig = window.ORIENTEERING_CONFIG;
+const supabaseClient = window.supabase && supabaseConfig?.supabaseUrl && supabaseConfig?.supabaseAnonKey
+  ? window.supabase.createClient(supabaseConfig.supabaseUrl, supabaseConfig.supabaseAnonKey)
+  : null;
 
 function save() { localStorage.setItem(storageKey, JSON.stringify(state)); }
 function score() { return checkpoints.filter(c => state.visited[c.id]).reduce((sum,c) => sum + c.points, 0); }
 
 async function apiRequest(url, options = {}) {
+  if (supabaseClient) return supabaseRequest(url, options);
   const response = await fetch(url, { ...options, headers: { "Content-Type": "application/json", ...(options.headers || {}) } });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error || "通信に失敗しました");
   return data;
+}
+
+async function supabaseSharedData() {
+  const { data: courseRows, error: courseError } = await supabaseClient
+    .from("orienteering_courses").select("id,title,duration,distance,updated_at")
+    .eq("is_active", true).order("id").limit(1);
+  if (courseError) throw courseError;
+  const activeCourse = courseRows?.[0];
+  if (!activeCourse) throw new Error("公開中のコースがありません");
+  const { data: pointRows, error: pointError } = await supabaseClient
+    .from("orienteering_checkpoints")
+    .select("id,course_id,name,lat,lng,points,distance,category,hint,mission,explain,sort_order")
+    .eq("course_id", activeCourse.id).order("sort_order").order("id");
+  if (pointError) throw pointError;
+  return { course: activeCourse, checkpoints: pointRows || [] };
+}
+
+async function supabaseRequest(url, options = {}) {
+  const method = (options.method || "GET").toUpperCase();
+  const body = options.body ? JSON.parse(options.body) : {};
+  if (url === "/api/course" && method === "GET") return supabaseSharedData();
+  if (url === "/api/admin/session" && method === "GET") {
+    const { data, error } = await supabaseClient.auth.getSession();
+    if (error) throw error;
+    return { authenticated: Boolean(data.session) };
+  }
+  if (url === "/api/admin/login" && method === "POST") {
+    const { error } = await supabaseClient.auth.signInWithPassword({ email: body.email, password: body.password });
+    if (error) throw new Error("メールアドレスまたはパスワードが違います");
+    return { authenticated: true };
+  }
+  if (url === "/api/admin/logout" && method === "POST") {
+    const { error } = await supabaseClient.auth.signOut();
+    if (error) throw error;
+    return { authenticated: false };
+  }
+  if (url === "/api/admin/course" && method === "PUT") {
+    const { error } = await supabaseClient.from("orienteering_courses").update({
+      title: body.title, duration: body.duration, distance: body.distance, updated_at: new Date().toISOString()
+    }).eq("id", course.id);
+    if (error) throw error;
+    return supabaseSharedData();
+  }
+  const match = url.match(/^\/api\/admin\/checkpoints(?:\/(\d+))?$/);
+  if (match) {
+    const id = match[1] ? Number(match[1]) : null;
+    if (method === "DELETE" && id) {
+      const { error } = await supabaseClient.from("orienteering_checkpoints").delete().eq("id", id);
+      if (error) throw error;
+      return supabaseSharedData();
+    }
+    const payload = {
+      course_id: course.id, name: body.name, lat: body.lat, lng: body.lng,
+      points: body.points, distance: body.distance, category: body.category,
+      hint: body.hint, mission: body.mission, explain: body.explain,
+      updated_at: new Date().toISOString()
+    };
+    if (method === "POST") {
+      payload.sort_order = checkpoints.length + 1;
+      const { error } = await supabaseClient.from("orienteering_checkpoints").insert(payload);
+      if (error) throw error;
+      return supabaseSharedData();
+    }
+    if (method === "PUT" && id) {
+      const { error } = await supabaseClient.from("orienteering_checkpoints").update(payload).eq("id", id);
+      if (error) throw error;
+      return supabaseSharedData();
+    }
+  }
+  throw new Error("未対応の操作です");
 }
 
 function applySharedData(data) {
@@ -194,7 +269,7 @@ document.getElementById("adminModalClose").onclick=closeAdminForm;
 document.getElementById("adminModalBackdrop").addEventListener("click",e=>{if(e.target.id==="adminModalBackdrop")closeAdminForm()});
 document.getElementById("useLocationButton").onclick=()=>requestLocation({center:false,fillForm:true});
 document.getElementById("checkpointForm").onsubmit=async e=>{e.preventDefault();const id=Number(document.getElementById("checkpointId").value)||null;const previous=checkpoints.find(cp=>cp.id===id);const cp={name:document.getElementById("checkpointName").value.trim(),category:document.getElementById("checkpointCategory").value.trim(),points:Number(document.getElementById("checkpointPoints").value),lat:Number(document.getElementById("checkpointLat").value),lng:Number(document.getElementById("checkpointLng").value),distance:previous?.distance||"距離未計測",hint:document.getElementById("checkpointHint").value.trim(),mission:document.getElementById("checkpointMission").value.trim(),explain:document.getElementById("checkpointExplain").value.trim()};try{const url=id?`/api/admin/checkpoints/${id}`:"/api/admin/checkpoints";applySharedData(await apiRequest(url,{method:id?"PUT":"POST",body:JSON.stringify(cp)}));closeAdminForm();toast(id?"変更を共有しました":"チェックポイントを追加・共有しました")}catch(error){toast(error.message)}};
-document.getElementById("adminLoginForm").onsubmit=async e=>{e.preventDefault();const error=document.getElementById("loginError");error.textContent="";try{await apiRequest("/api/admin/login",{method:"POST",body:JSON.stringify({password:document.getElementById("adminPassword").value})});document.getElementById("adminPassword").value="";showAdminState(true);await loadSharedData();toast("管理者としてログインしました")}catch(err){error.textContent=err.message}};
+document.getElementById("adminLoginForm").onsubmit=async e=>{e.preventDefault();const error=document.getElementById("loginError");error.textContent="";try{await apiRequest("/api/admin/login",{method:"POST",body:JSON.stringify({email:document.getElementById("adminEmail").value.trim(),password:document.getElementById("adminPassword").value})});document.getElementById("adminPassword").value="";showAdminState(true);await loadSharedData();toast("管理者としてログインしました")}catch(err){error.textContent=err.message}};
 document.getElementById("logoutButton").onclick=async()=>{try{await apiRequest("/api/admin/logout",{method:"POST",body:"{}"})}finally{showAdminState(false);toast("ログアウトしました")}};
 document.getElementById("resetButton").onclick=()=>{state={visited:{},answers:{}};save();render();toast("記録をリセットしました")};
 window.openSheet=openSheet;window.tryCheckin=tryCheckin;window.showAnswer=showAnswer;window.completeCheckin=completeCheckin;

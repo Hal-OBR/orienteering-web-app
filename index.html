@@ -105,6 +105,7 @@
         <form class="admin-card login-card" id="adminLoginForm">
           <div class="admin-card-title"><div><small>ADMIN LOGIN</small><h3>管理者ログイン</h3></div></div>
           <p>コースを編集するには管理者パスワードを入力してください。</p>
+          <label>メールアドレス<input id="adminEmail" type="email" required autocomplete="username" /></label>
           <label>パスワード<input id="adminPassword" type="password" required autocomplete="current-password" /></label>
           <p class="login-error" id="loginError"></p>
           <button class="primary-button" type="submit">ログイン</button>
@@ -170,6 +171,8 @@
 
   <div class="toast" id="toast" role="status"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
