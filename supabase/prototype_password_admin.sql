@@ -12,8 +12,10 @@ create table if not exists public.orienteering_admin_settings (
 alter table public.orienteering_admin_settings enable row level security;
 revoke all on public.orienteering_admin_settings from anon, authenticated;
 
+-- 実行前に CHANGE_THIS_PASSWORD_BEFORE_RUN を実際の仮パスワードへ置換してください。
+-- パスワードをGitHubへコミットしないため、ここには実値を保存しません。
 insert into public.orienteering_admin_settings(id, password_hash)
-values (true, extensions.crypt('Hibari-Field-2026!', extensions.gen_salt('bf')))
+values (true, extensions.crypt('CHANGE_THIS_PASSWORD_BEFORE_RUN', extensions.gen_salt('bf')))
 on conflict (id) do update
 set password_hash = excluded.password_hash, updated_at = now();
 
