@@ -1,0 +1,9 @@
+orienteering.db
+*.db-journal
+__pycache__/
+server.log
+server-error.log
+public-tunnel.log
+public-tunnel-error.log
+tools/cloudflared.exe
+config.js
