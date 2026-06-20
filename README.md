@@ -36,7 +36,7 @@ py -3 server.py
 
 ## GitHub Pages + Supabase
 
-正式な共有データはSupabaseの `orienteering_courses` と `orienteering_checkpoints` に保存します。管理者ログインにはSupabase Authのメールアドレス・パスワード認証を使います。GitHub Pagesはmainブランチへのpush時にActionsから更新されます。
+正式な共有データはSupabaseの `orienteering_courses` と `orienteering_checkpoints` に保存します。ヒアリング用プロトタイプでは共通パスワードをハッシュ化してSupabaseへ保存し、専用RPC経由で管理操作を行います。正式な管理者認証はヒアリング後の検討事項です。GitHub Pagesはmainブランチへのpush時にActionsから更新されます。
 
 ## スマートフォンへ一時公開する
 
