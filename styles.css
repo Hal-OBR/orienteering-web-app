@@ -63,6 +63,13 @@ button { color: inherit; }
 .empty-state { margin: 0 16px; padding: 28px 15px; text-align:center; color:var(--muted); font-size:12px; border:1px dashed #bdc6c0; border-radius:16px; }
 .log-card { margin: 0 16px 10px; padding: 14px; background:white; border-radius:14px; border-left:4px solid var(--forest-2); }.log-card strong { display:block; font-size:13px; }.log-card p { margin:4px 0 0; color:var(--muted); font-size:11px; }
 .guide-card { background:white; border:1px solid var(--line); border-radius:17px; }
+.course-select-list { display:grid; gap:12px; padding:0 16px 24px; }
+.course-card { width:100%; display:block; padding:16px; border:1px solid var(--line); border-radius:17px; background:white; text-align:left; box-shadow:0 5px 18px rgba(28,57,47,.06); cursor:pointer; }
+.course-card.selected { border-color:var(--forest-2); background:#f1f8f4; }
+.course-card-label { display:inline-block; margin-bottom:8px; padding:4px 8px; border-radius:999px; background:var(--mint); color:var(--forest-2); font-size:10px; font-weight:900; }
+.course-card strong { display:block; font-size:16px; margin-bottom:4px; }
+.course-card small { display:block; color:var(--muted); font-size:12px; }
+.back-button { margin:0 0 14px; padding:8px 11px; border:0; border-radius:999px; background:white; color:var(--forest-2); font-size:12px; font-weight:800; cursor:pointer; }
 .hero-guide { display:flex; align-items:center; gap:14px; margin:0 16px 12px; padding:16px; }.guide-icon { width:48px;height:48px;display:grid;place-items:center;background:var(--forest);color:white;border-radius:14px;font-family:serif;font-size:22px; }.hero-guide small,.hero-guide h3 {display:block;margin:0}.hero-guide small {color:var(--muted)}.hero-guide h3{font-size:14px;margin-top:3px}
 .guide-grid { display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px 12px; }.guide-grid article{padding:14px}.guide-grid span,.guide-grid small,.guide-grid strong{display:block}.guide-grid span{font-size:18px}.guide-grid small{color:var(--muted);font-size:10px;margin:5px 0 2px}.guide-grid strong{font-size:14px}
 .rules { margin:0 16px 14px;padding:18px }.rules h3{margin:0 0 12px}.rules ol{list-style:none;margin:0;padding:0}.rules li{display:flex;gap:12px;margin:12px 0}.rules li>span{width:28px;height:28px;flex:0 0 auto;display:grid;place-items:center;border-radius:50%;background:var(--mint);font-weight:900}.rules p{margin:0;font-size:12px;line-height:1.6}.outline-button{display:block;width:calc(100% - 32px);margin:0 16px 25px;padding:13px;border:1px solid #9aa9a2;border-radius:12px;background:transparent;color:var(--muted);cursor:pointer}

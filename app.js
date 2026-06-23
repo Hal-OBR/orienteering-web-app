@@ -6,12 +6,15 @@ const defaultCheckpoints = [
   { id: 5, name: "谷戸せせらぎ公園の水と低地", lat: 35.7431216, lng: 139.5444632, points: 35, distance: "約1.2km", category: "水・微地形", hint: "公園の水辺と周囲の高さ、道路の傾きを見比べてみよう。", mission: "水がこの場所にある理由を、周囲の高低差から仮説として書いてください。", explain: "水辺の位置と地形には関係があることがあります。今回は現地観察から仮説を立て、資料で確かめる題材にします。" }
 ];
 
-const storageKey = "orienteering-prototype-hibarigaoka-v1";
+const progressStoragePrefix = "orienteering-progress-v1";
 const checkpointStorageKey = "orienteering-checkpoints-hibarigaoka-v1";
 const courseStorageKey = "orienteering-course-hibarigaoka-v1";
+const selectedCourseStorageKey = "orienteering-selected-course-id-v1";
 let checkpoints = JSON.parse(localStorage.getItem(checkpointStorageKey) || "null") || structuredClone(defaultCheckpoints);
 let course = JSON.parse(localStorage.getItem(courseStorageKey) || "null") || { title: "ひばりヶ丘・地形とまちの変化を歩く", duration: "約75分", distance: "約3.0km" };
-let state = JSON.parse(localStorage.getItem(storageKey) || '{"visited":{},"answers":{}}');
+let availableCourses = course.id ? [course] : [];
+let selectedCourseId = Number(localStorage.getItem(selectedCourseStorageKey) || course.id || 0) || null;
+let state = loadProgressState();
 let selected = null;
 let map;
 const markers = new Map();
@@ -25,7 +28,9 @@ const supabaseClient = window.supabase && supabaseConfig?.supabaseUrl && supabas
   ? window.supabase.createClient(supabaseConfig.supabaseUrl, supabaseConfig.supabaseAnonKey)
   : null;
 
-function save() { localStorage.setItem(storageKey, JSON.stringify(state)); }
+function progressStorageKey() { return `${progressStoragePrefix}-${course.id || "local"}`; }
+function loadProgressState() { return JSON.parse(localStorage.getItem(progressStorageKey()) || '{"visited":{},"answers":{}}'); }
+function save() { localStorage.setItem(progressStorageKey(), JSON.stringify(state)); }
 function score() { return checkpoints.filter(c => state.visited[c.id]).reduce((sum,c) => sum + c.points, 0); }
 
 async function apiRequest(url, options = {}) {
@@ -36,19 +41,19 @@ async function apiRequest(url, options = {}) {
   return data;
 }
 
-async function supabaseSharedData() {
+async function supabaseSharedData(courseId = selectedCourseId) {
   const { data: courseRows, error: courseError } = await supabaseClient
     .from("orienteering_courses").select("id,title,duration,distance,updated_at")
-    .eq("is_active", true).order("id").limit(1);
+    .eq("is_active", true).order("id");
   if (courseError) throw courseError;
-  const activeCourse = courseRows?.[0];
+  const activeCourse = courseRows?.find(item => item.id === Number(courseId)) || courseRows?.[0];
   if (!activeCourse) throw new Error("公開中のコースがありません");
   const { data: pointRows, error: pointError } = await supabaseClient
     .from("orienteering_checkpoints")
     .select("id,course_id,name,lat,lng,points,distance,category,hint,mission,explain,sort_order")
     .eq("course_id", activeCourse.id).order("sort_order").order("id");
   if (pointError) throw pointError;
-  return { course: activeCourse, checkpoints: pointRows || [] };
+  return { courses: courseRows || [], course: activeCourse, checkpoints: pointRows || [] };
 }
 
 async function supabaseRequest(url, options = {}) {
@@ -108,11 +113,15 @@ async function supabaseRequest(url, options = {}) {
 
 function applySharedData(data) {
   if (!data?.course || !Array.isArray(data?.checkpoints)) return;
+  if (Array.isArray(data.courses)) availableCourses = data.courses;
   course = data.course;
   checkpoints = data.checkpoints;
+  selectedCourseId = course.id || selectedCourseId;
+  if (selectedCourseId) localStorage.setItem(selectedCourseStorageKey, String(selectedCourseId));
+  state = loadProgressState();
   localStorage.setItem(courseStorageKey, JSON.stringify(course));
   localStorage.setItem(checkpointStorageKey, JSON.stringify(checkpoints));
-  renderMarkers(); render();
+  renderMarkers(); fitMapToCheckpoints(); render();
 }
 
 async function loadSharedData() {
@@ -154,6 +163,7 @@ function renderMarkers() {
 function render() {
   const visited = checkpoints.filter(c => state.visited[c.id]);
   const total = score();
+  const percent = checkpoints.length ? Math.round(visited.length / checkpoints.length * 100) : 0;
   document.getElementById("courseTitle").textContent = course.title;
   document.getElementById("courseMeta").textContent = `全${checkpoints.length}地点・${course.duration}・${course.distance}（候補）`;
   document.getElementById("guideDuration").textContent = course.duration;
@@ -164,7 +174,6 @@ function render() {
   document.getElementById("visitedCount").textContent = `${visited.length} / ${checkpoints.length}`;
   document.getElementById("progressScore").textContent = `${total} pt`;
   document.getElementById("progressVisited").textContent = visited.length;
-  const percent = Math.round(visited.length / checkpoints.length * 100);
   document.getElementById("progressPercent").textContent = `${percent}%`;
   document.getElementById("progressRing").style.setProperty("--progress", `${percent * 3.6}deg`);
   document.getElementById("halfBadge").classList.toggle("locked", visited.length < 3);
@@ -177,7 +186,50 @@ function render() {
   document.getElementById("visitLog").className = visited.length ? "" : "empty-state";
   document.getElementById("visitLog").innerHTML = visited.length ? visited.map(cp => `<article class="log-card"><strong>✓ ${cp.name}　+${cp.points} pt</strong><p>${escapeHtml(state.answers[cp.id] || "回答なし")}</p></article>`).join("") : "まだ訪問した地点はありません。<br />地図から最初の場所を探してみましょう。";
   markers.forEach((marker,id) => marker.setIcon(L.divIcon({ className:`checkpoint-marker ${state.visited[id] ? "visited" : ""}`, html:state.visited[id] ? "✓" : id, iconSize:[34,34] })));
+  renderCourseList();
   renderAdmin();
+}
+
+function renderCourseList() {
+  const list = document.getElementById("courseList");
+  if (!list) return;
+  const courses = availableCourses.length ? availableCourses : [course];
+  list.innerHTML = courses.map(item => {
+    const selectedClass = item.id === course.id ? " selected" : "";
+    return `<button class="course-card${selectedClass}" type="button" onclick="selectCourse(${item.id || 0})">
+      <span class="course-card-label">${item.id === course.id ? "選択中" : "選択する"}</span>
+      <strong>${escapeHtml(item.title)}</strong>
+      <small>${escapeHtml(item.duration || "所要時間未設定")} ・ ${escapeHtml(item.distance || "距離未設定")}</small>
+    </button>`;
+  }).join("");
+}
+
+function showCourseList() {
+  document.getElementById("courseListView").hidden = false;
+  document.getElementById("courseDetailView").hidden = true;
+}
+
+function showCourseDetail() {
+  document.getElementById("courseListView").hidden = true;
+  document.getElementById("courseDetailView").hidden = false;
+}
+
+async function selectCourse(id) {
+  try {
+    if (supabaseClient && id) {
+      applySharedData(await supabaseSharedData(id));
+    }
+    showCourseDetail();
+    toast(`${course.title}を表示しました`);
+  } catch (error) {
+    toast(error.message);
+  }
+}
+
+function fitMapToCheckpoints() {
+  if (!map || !window.L || !checkpoints.length) return;
+  const bounds = L.latLngBounds(checkpoints.map(cp => [cp.lat, cp.lng]));
+  map.fitBounds(bounds, { padding: [38, 38], maxZoom: 15 });
 }
 
 function distanceLabel(cp) {
@@ -211,8 +263,9 @@ function distance(a,b,c,d){const r=6371000,p=Math.PI/180,x=(c-a)*p,y=(d-b)*p*Mat
 function escapeHtml(s){return String(s).replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]))}
 function toast(message){const el=document.getElementById("toast");el.textContent=message;el.classList.add("show");clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>el.classList.remove("show"),2600)}
 
-document.querySelectorAll(".bottom-nav button").forEach(btn => btn.addEventListener("click", () => { document.querySelectorAll(".bottom-nav button,.screen").forEach(x=>x.classList.remove("active"));btn.classList.add("active");document.getElementById(btn.dataset.screen).classList.add("active");if(btn.dataset.screen==="mapScreen"&&map)setTimeout(()=>map.invalidateSize(),50);if(btn.dataset.screen==="adminScreen")checkAdminSession(); }));
+document.querySelectorAll(".bottom-nav button").forEach(btn => btn.addEventListener("click", () => { document.querySelectorAll(".bottom-nav button,.screen").forEach(x=>x.classList.remove("active"));btn.classList.add("active");document.getElementById(btn.dataset.screen).classList.add("active");if(btn.dataset.screen==="mapScreen"&&map)setTimeout(()=>map.invalidateSize(),50);if(btn.dataset.screen==="infoScreen")showCourseList();if(btn.dataset.screen==="adminScreen")checkAdminSession(); }));
 document.getElementById("sheetClose").onclick=closeSheet; document.getElementById("sheetBackdrop").onclick=closeSheet;
+document.getElementById("backToCourseList").onclick=showCourseList;
 const modal=document.getElementById("modalBackdrop"); const closeModal=()=>modal.classList.remove("show"); document.getElementById("helpButton").onclick=()=>modal.classList.add("show"); document.getElementById("modalClose").onclick=closeModal; document.getElementById("modalOk").onclick=closeModal;
 function requestLocation({ center = true, fillForm = false } = {}) {
   if (!navigator.geolocation) { toast("この端末では位置情報を利用できません"); return; }
@@ -274,7 +327,7 @@ document.getElementById("adminLoginForm").onsubmit=async e=>{e.preventDefault();
 document.getElementById("logoutButton").onclick=async()=>{try{await apiRequest("/api/admin/logout",{method:"POST",body:"{}"})}finally{showAdminState(false);toast("ログアウトしました")}};
 document.getElementById("resetButton").onclick=()=>{state={visited:{},answers:{}};save();render();toast("記録をリセットしました")};
 window.openSheet=openSheet;window.tryCheckin=tryCheckin;window.showAnswer=showAnswer;window.completeCheckin=completeCheckin;
-window.openAdminForm=openAdminForm;window.deleteCheckpoint=deleteCheckpoint;
+window.openAdminForm=openAdminForm;window.deleteCheckpoint=deleteCheckpoint;window.selectCourse=selectCourse;
 initMap();render();loadSharedData();checkAdminSession();
 window.addEventListener("focus", loadSharedData);
 setInterval(loadSharedData, 30000);

@@ -69,30 +69,42 @@
       </section>
 
       <section class="screen" id="infoScreen" aria-labelledby="infoTab">
-        <div class="page-heading">
-          <p class="eyebrow">COURSE GUIDE</p>
-          <h2>コースについて</h2>
-          <p>今回の試作で想定しているイベント内容です。</p>
+        <div id="courseListView">
+          <div class="page-heading">
+            <p class="eyebrow">COURSES</p>
+            <h2>コース一覧</h2>
+            <p>使うコースを選ぶと、地図・チェックポイント・発見ログがそのコースに切り替わります。</p>
+          </div>
+          <div class="course-select-list" id="courseList"></div>
         </div>
-        <article class="guide-card hero-guide">
-          <div class="guide-icon">地</div>
-          <div><small>テーマ</small><h3>地図と現地の「ずれ」を楽しむ</h3></div>
-        </article>
-        <div class="guide-grid">
-          <article class="guide-card"><span>⏱</span><small>所要時間</small><strong id="guideDuration">約75分</strong></article>
-          <article class="guide-card"><span>🚶</span><small>歩行距離</small><strong id="guideDistance">約3.0km</strong></article>
-          <article class="guide-card"><span>◎</span><small>地点数</small><strong id="guidePoints">全5地点</strong></article>
-          <article class="guide-card"><span>★</span><small>合計得点</small><strong id="guideScore">150 pt</strong></article>
+
+        <div id="courseDetailView" hidden>
+          <div class="page-heading">
+            <button class="back-button" id="backToCourseList" type="button">← コース一覧へ</button>
+            <p class="eyebrow">COURSE GUIDE</p>
+            <h2>コースについて</h2>
+            <p>今回の試作で想定しているイベント内容です。</p>
+          </div>
+          <article class="guide-card hero-guide">
+            <div class="guide-icon">地</div>
+            <div><small>テーマ</small><h3>地図と現地の「ずれ」を楽しむ</h3></div>
+          </article>
+          <div class="guide-grid">
+            <article class="guide-card"><span>⏱</span><small>所要時間</small><strong id="guideDuration">約75分</strong></article>
+            <article class="guide-card"><span>🚶</span><small>歩行距離</small><strong id="guideDistance">約3.0km</strong></article>
+            <article class="guide-card"><span>◎</span><small>地点数</small><strong id="guidePoints">全5地点</strong></article>
+            <article class="guide-card"><span>★</span><small>合計得点</small><strong id="guideScore">150 pt</strong></article>
+          </div>
+          <article class="guide-card rules">
+            <h3>遊び方</h3>
+            <ol>
+              <li><span>1</span><p><strong>地図とヒントで探す</strong><br />正確な場所だけでなく周辺の地理にも注目。</p></li>
+              <li><span>2</span><p><strong>現地でチェックイン</strong><br />地点に近づいたら位置情報で判定します。</p></li>
+              <li><span>3</span><p><strong>ミッションに回答</strong><br />観察して気づいたことを記録しましょう。</p></li>
+            </ol>
+          </article>
+          <button class="outline-button" id="resetButton">このコースの記録をリセット</button>
         </div>
-        <article class="guide-card rules">
-          <h3>遊び方</h3>
-          <ol>
-            <li><span>1</span><p><strong>地図とヒントで探す</strong><br />正確な場所だけでなく周辺の地理にも注目。</p></li>
-            <li><span>2</span><p><strong>現地でチェックイン</strong><br />地点に近づいたら位置情報で判定します。</p></li>
-            <li><span>3</span><p><strong>ミッションに回答</strong><br />観察して気づいたことを記録しましょう。</p></li>
-          </ol>
-        </article>
-        <button class="outline-button" id="resetButton">プロトタイプの記録をリセット</button>
       </section>
 
       <section class="screen" id="adminScreen" aria-labelledby="adminTab">
