@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#123c31" />
-  <title>オリエンテーリングWebアプリ（仮）</title>
+  <meta name="theme-color" content="#1d3f36" />
+  <title>土地利用観察ノート</title>
   <link rel="preconnect" href="https://unpkg.com" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
   <link rel="stylesheet" href="styles.css" />
@@ -13,177 +13,127 @@
   <div id="app">
     <header class="topbar">
       <div>
-        <p class="eyebrow">ちずる会・体験プロトタイプ</p>
-        <h1>オリエンテーリングWebアプリ <span>仮</span></h1>
+        <p class="eyebrow">CHIZURU FIELD NOTE</p>
+        <h1>土地利用観察ノート</h1>
       </div>
-      <button class="icon-button" id="helpButton" aria-label="この試作について">?</button>
+      <button class="icon-button" id="helpButton" type="button" aria-label="このアプリについて">?</button>
     </header>
 
     <main>
       <section class="screen active" id="mapScreen" aria-labelledby="mapTab">
-        <div class="event-card">
+        <div class="summary-band">
           <div>
-            <p class="event-label">今日のコース</p>
-            <h2 id="courseTitle">ひばりヶ丘・地形とまちの変化を歩く</h2>
-            <p id="courseMeta">全5地点・約75分・約3.0km（候補）</p>
+            <p class="event-label">今日のテーマ</p>
+            <h2>地図に気づきを記録する</h2>
+            <p id="summaryText">地図を見て、気になった場所にピンとコメントを残せます。</p>
           </div>
-          <div class="score-pill"><strong id="headerScore">0</strong><span>pt</span></div>
+          <button class="primary-compact" id="addHereButton" type="button">現在地で記録</button>
         </div>
 
         <div class="map-wrap">
-          <div id="map" aria-label="チェックポイント地図"></div>
-          <div class="map-loading" id="mapLoading">地図を準備中…</div>
-          <button class="location-button" id="locationButton" aria-label="現在地を表示">⌖</button>
-          <div class="location-status" id="locationStatus"><span></span> 現在地：未取得</div>
-          <div class="map-hint">番号をタップして地点を確認</div>
+          <div id="map" aria-label="観察マップ"></div>
+          <div class="map-loading" id="mapLoading">地図を読み込み中...</div>
+          <button class="location-button" id="locationButton" type="button" aria-label="現在地を表示">◎</button>
+          <div class="location-status" id="locationStatus"><span></span> 現在地: 未取得</div>
+          <div class="map-hint">地図をタップして気づきを追加</div>
         </div>
 
-        <div class="nearby-panel">
+        <div class="panel">
           <div class="section-heading">
             <div>
-              <p class="eyebrow">NEXT CHECKPOINT</p>
-              <h2>近くのチェックポイント</h2>
+              <p class="eyebrow">OBSERVATION LENSES</p>
+              <h2>観察の視点</h2>
             </div>
-            <span id="visitedCount">0 / 5</span>
+            <span id="pinCount">0件</span>
           </div>
-          <div class="checkpoint-list" id="checkpointList"></div>
+          <div class="lens-grid" id="lensGrid"></div>
         </div>
       </section>
 
-      <section class="screen" id="progressScreen" aria-labelledby="progressTab">
+      <section class="screen" id="portfolioScreen" aria-labelledby="portfolioTab">
         <div class="page-heading">
-          <p class="eyebrow">YOUR FIELD NOTE</p>
-          <h2>今日の発見</h2>
-          <p>点数だけでなく、現地で見つけたことも記録します。</p>
+          <p class="eyebrow">MY NOTES</p>
+          <h2>自分の記録</h2>
+          <p>自分が地図に残した気づきです。あとから見返して、土地利用の違いを説明する材料にできます。</p>
         </div>
-        <div class="progress-hero">
-          <div class="ring" id="progressRing"><span id="progressPercent">0%</span></div>
-          <div><strong id="progressScore">0 pt</strong><span>5地点中 <b id="progressVisited">0</b> 地点を訪問</span></div>
-        </div>
-        <div class="achievement-grid">
-          <article><span>🧭</span><strong>はじめの一歩</strong><small>最初の地点を訪問</small></article>
-          <article class="locked" id="halfBadge"><span>🗺️</span><strong>地図読み中級</strong><small>3地点を訪問</small></article>
-        </div>
-        <h3 class="subheading">訪問ログ</h3>
-        <div id="visitLog" class="empty-state">まだ訪問した地点はありません。<br />地図から最初の場所を探してみましょう。</div>
+        <div id="portfolioList"></div>
       </section>
 
-      <section class="screen" id="infoScreen" aria-labelledby="infoTab">
-        <div id="courseListView">
-          <div class="page-heading">
-            <p class="eyebrow">COURSES</p>
-            <h2>コース一覧</h2>
-            <p>使うコースを選ぶと、地図・チェックポイント・発見ログがそのコースに切り替わります。</p>
-          </div>
-          <div class="course-select-list" id="courseList"></div>
+      <section class="screen" id="shareScreen" aria-labelledby="shareTab">
+        <div class="page-heading">
+          <p class="eyebrow">SHARED BOARD</p>
+          <h2>みんなの気づき</h2>
+          <p>だれが、どこを見て、どんなことに気づいたかを一覧できます。発表やふりかえりで使う共有スペースです。</p>
         </div>
-
-        <div id="courseDetailView" hidden>
-          <div class="page-heading">
-            <button class="back-button" id="backToCourseList" type="button">← コース一覧へ</button>
-            <p class="eyebrow">COURSE GUIDE</p>
-            <h2>コースについて</h2>
-            <p>今回の試作で想定しているイベント内容です。</p>
-          </div>
-          <article class="guide-card hero-guide">
-            <div class="guide-icon">地</div>
-            <div><small>テーマ</small><h3>地図と現地の「ずれ」を楽しむ</h3></div>
-          </article>
-          <div class="guide-grid">
-            <article class="guide-card"><span>⏱</span><small>所要時間</small><strong id="guideDuration">約75分</strong></article>
-            <article class="guide-card"><span>🚶</span><small>歩行距離</small><strong id="guideDistance">約3.0km</strong></article>
-            <article class="guide-card"><span>◎</span><small>地点数</small><strong id="guidePoints">全5地点</strong></article>
-            <article class="guide-card"><span>★</span><small>合計得点</small><strong id="guideScore">150 pt</strong></article>
-          </div>
-          <article class="guide-card rules">
-            <h3>遊び方</h3>
-            <ol>
-              <li><span>1</span><p><strong>地図とヒントで探す</strong><br />正確な場所だけでなく周辺の地理にも注目。</p></li>
-              <li><span>2</span><p><strong>現地でチェックイン</strong><br />地点に近づいたら位置情報で判定します。</p></li>
-              <li><span>3</span><p><strong>ミッションに回答</strong><br />観察して気づいたことを記録しましょう。</p></li>
-            </ol>
-          </article>
-          <button class="outline-button" id="resetButton">このコースの記録をリセット</button>
+        <div class="share-tools">
+          <label>表示する人
+            <select id="authorFilter"></select>
+          </label>
+          <button class="secondary-button" id="showAllOnMapButton" type="button">地図で全体を見る</button>
         </div>
+        <div id="sharedBoard"></div>
       </section>
 
       <section class="screen" id="adminScreen" aria-labelledby="adminTab">
-        <div class="page-heading admin-heading">
+        <div class="page-heading">
           <p class="eyebrow">ADMIN</p>
-          <h2>管理者ページ</h2>
-          <p>この端末内でコースとチェックポイントを編集できます。</p>
+          <h2>管理者</h2>
+          <p>ちずる会の人が、参加者に見てほしい視点を編集できます。ここで変えた視点は、地図画面のカードと記録フォームに反映されます。</p>
         </div>
-        <div class="admin-notice">共有データベース接続済み：管理者の変更は、このサーバーを開く参加者全員に反映されます</div>
-        <form class="admin-card login-card" id="adminLoginForm">
-          <div class="admin-card-title"><div><small>ADMIN LOGIN</small><h3>管理者ログイン</h3></div></div>
-          <p>コースを編集するには、ヒアリング用の共通パスワードを入力してください。</p>
-          <label>パスワード<input id="adminPassword" type="password" required autocomplete="current-password" /></label>
-          <p class="login-error" id="loginError"></p>
-          <button class="primary-button" type="submit">ログイン</button>
+        <form class="admin-card" id="lensForm">
+          <input type="hidden" id="lensId" />
+          <label>視点名
+            <input id="lensLabel" required maxlength="24" placeholder="例: 駅前・交通" />
+          </label>
+          <label>問い・見るポイント
+            <textarea id="lensPrompt" required placeholder="例: 人の流れ、店、バス停、駐輪場の集まり方を見る"></textarea>
+          </label>
+          <div class="admin-form-actions">
+            <button class="primary-button" type="submit">視点を保存</button>
+            <button class="outline-button" id="cancelLensEditButton" type="button">入力をクリア</button>
+          </div>
         </form>
-        <div id="adminContent" hidden>
-        <div class="admin-session"><span>● 管理者としてログイン中</span><button id="logoutButton" type="button">ログアウト</button></div>
-        <form class="admin-card" id="courseForm">
-          <div class="admin-card-title"><div><small>COURSE SETTINGS</small><h3>コース設定</h3></div></div>
-          <label>コース名<input id="adminCourseTitle" required /></label>
-          <div class="form-row"><label>所要時間<input id="adminDuration" placeholder="約75分" /></label><label>歩行距離<input id="adminDistance" placeholder="約3.0km" /></label></div>
-          <button class="secondary-button" type="submit">コース設定を保存</button>
-        </form>
-        <div class="admin-card admin-checkpoints">
-          <div class="admin-card-title"><div><small>CHECKPOINTS</small><h3>チェックポイント</h3></div><button class="small-primary" id="addCheckpointButton" type="button">＋ 追加</button></div>
-          <div id="adminCheckpointList"></div>
+        <div class="admin-card">
+          <div class="section-heading compact">
+            <div>
+              <p class="eyebrow">LENSES</p>
+              <h2>登録済みの視点</h2>
+            </div>
+          </div>
+          <div id="adminLensList"></div>
         </div>
-        </div>
+        <button class="danger-button" id="resetButton" type="button">この端末の記録をリセット</button>
       </section>
     </main>
 
     <nav class="bottom-nav" aria-label="メインメニュー">
-      <button class="active" id="mapTab" data-screen="mapScreen"><span>⌖</span>地図</button>
-      <button id="progressTab" data-screen="progressScreen"><span>◔</span>発見ログ</button>
-      <button id="infoTab" data-screen="infoScreen"><span>ⓘ</span>コース</button>
-      <button id="adminTab" data-screen="adminScreen"><span>⚙</span>管理</button>
+      <button class="active" id="mapTab" data-screen="mapScreen" type="button"><span>⌖</span>地図</button>
+      <button id="portfolioTab" data-screen="portfolioScreen" type="button"><span>▤</span>記録</button>
+      <button id="shareTab" data-screen="shareScreen" type="button"><span>◎</span>共有</button>
+      <button id="adminTab" data-screen="adminScreen" type="button"><span>⚙</span>管理</button>
     </nav>
   </div>
 
   <div class="sheet-backdrop" id="sheetBackdrop"></div>
-  <aside class="bottom-sheet" id="checkpointSheet" aria-modal="true" role="dialog" aria-labelledby="sheetTitle">
+  <aside class="bottom-sheet" id="observationSheet" aria-modal="true" role="dialog" aria-labelledby="sheetTitle">
     <div class="sheet-handle"></div>
-    <button class="sheet-close" id="sheetClose" aria-label="閉じる">×</button>
+    <button class="sheet-close" id="sheetClose" type="button" aria-label="閉じる">×</button>
     <div id="sheetContent"></div>
   </aside>
 
   <div class="modal-backdrop" id="modalBackdrop">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-      <button class="sheet-close" id="modalClose" aria-label="閉じる">×</button>
+      <button class="sheet-close" id="modalClose" type="button" aria-label="閉じる">×</button>
       <p class="eyebrow">PROTOTYPE</p>
       <h2 id="modalTitle">この試作について</h2>
-      <p>ヒアリング前のたたき台です。地点の見せ方、チェックイン方法、ミッション、得点、発見ログなどを実際に触りながら意見を集める想定です。</p>
-      <p class="modal-note">※ ひばりヶ丘駅周辺の実在地点を使った候補コースです。安全性・導線・解説は現地で確認します。位置情報を許可しなくても「デモでチェックイン」で体験できます。</p>
-      <button class="primary-button" id="modalOk">触ってみる</button>
+      <p>チェックポイントはありません。参加者が地図を見て、自分で気づいた場所にピンを置き、名前・視点・コメントを残します。</p>
+      <p class="modal-note">共有タブでは、アプリ内に保存された全員の気づきを一覧できます。今の試作では同じ端末・同じブラウザ内の共有ボードとして動きます。</p>
+      <button class="primary-button" id="modalOk" type="button">始める</button>
     </div>
-  </div>
-
-  <div class="modal-backdrop" id="adminModalBackdrop">
-    <form class="modal admin-modal" id="checkpointForm">
-      <button class="sheet-close" id="adminModalClose" type="button" aria-label="閉じる">×</button>
-      <p class="eyebrow">CHECKPOINT EDITOR</p>
-      <h2 id="adminModalTitle">チェックポイントを追加</h2>
-      <input type="hidden" id="checkpointId" />
-      <label>地点名<input id="checkpointName" required placeholder="例：駅前の道路を読む" /></label>
-      <div class="form-row"><label>カテゴリ<input id="checkpointCategory" required placeholder="地形" /></label><label>得点<input id="checkpointPoints" required type="number" min="0" value="20" /></label></div>
-      <div class="form-row"><label>緯度<input id="checkpointLat" required type="number" step="any" /></label><label>経度<input id="checkpointLng" required type="number" step="any" /></label></div>
-      <button class="use-location-button" id="useLocationButton" type="button">⌖ 現在地を座標に使う</button>
-      <label>場所のヒント<textarea id="checkpointHint" required></textarea></label>
-      <label>現地ミッション<textarea id="checkpointMission" required></textarea></label>
-      <label>チェックイン後の解説<textarea id="checkpointExplain" required></textarea></label>
-      <button class="primary-button" type="submit">保存する</button>
-    </form>
   </div>
 
   <div class="toast" id="toast" role="status"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
